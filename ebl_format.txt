@@ -1,0 +1,220 @@
+Data format emitted from the EBL 'serial' pin.
+
+Packet:
+
+	2 byte header {0xaa, 0x55}
+	256 byte memory dump
+	1 byte EBL hardware status
+	16 byte ADC payload(?)
+	2 byte trailer/checksum (algorithm TBD)
+
+	Data values are big-endian.
+
+Notable locations (reversed from watching WUD):
+
+0x01:	0x80 - engine running flag
+0x02:	0x80 - idle flag
+0x03:	0x08 - closed throttle flag
+	0x04 - lean cruise flag
+
+0x05:	0x80 - torque converter clutch flag
+	0x10 - shift flag
+	0x08 - A/C flag
+	0x01 - fan flag
+0x06:	0x80 - overspeed fuel cut flag (not overspeed when set)
+	0x08 - N2O flag
+	0x04 - launch flag
+	0x01 - charcoal canister purge flag
+
+0x08:	0x08 - decel fuel cutoff flag
+
+0x0a:	Spark Advance - 0x1c = 10 degrees
+0x0b:	0x01 - SES on flag
+
+0x0d:	0x80 - power enrichment flag
+	0x40 - accel enrichment flag
+	0x10 - decel enleanment flag
+0x0e:	0x80 - closed loop flag
+	0x10 - Asynch injection mode flag
+	0x02 - BLM learn flag
+0x0f:	0x08 - A/C request flag
+
+0x10:	PromID high byte
+0x11:	PromID low byte
+0x12:	Malfunction codes (column 1)
+	0x80 - DRP/12
+	0x40 - O2/13
+	0x20 - CTS HI/14
+	0x10 - CTS LO/15
+	0x08 - TPS HI/21
+	0x04 - TPS LO/22
+	0x02 - IAT LO/23
+	0x01 - VSS/24
+0x13:	Malfunction codes (column 1)
+	0x80 - IAT HI/25
+	0x10 - MAP HI/33
+	0x08 - MAP LO/34
+	0x01 - EST/42
+0x14:	Malfunction codes (column 1)
+	0x80 - ESC/43
+	0x40 - O2 LN/44
+	0x20 - O2 RH/45
+	0x10 - PROM/51
+	0x08 - CALPAK/52
+	0x04 - VATs/53
+	0x02 - FP RLY/54
+	0x01 - ADU/55
+0x15:	Malfunction codes (column 2)
+	0x80 - DRP/12
+	0x40 - O2/13
+	0x20 - CTS HI/14
+	0x10 - CTS LO/15
+	0x08 - TPS HI/21
+	0x04 - TPS LO/22
+	0x02 - IAT LO/23
+	0x01 - VSS/24
+0x16:	Malfunction codes (column 2)
+	0x80 - IAT HI/25
+	0x10 - MAP HI/33
+	0x08 - MAP LO/34
+	0x01 - EST/42
+0x17:	Malfunction codes (column 2)
+	0x80 - ESC/43
+	0x40 - O2 LN/44
+	0x20 - O2 RH/45
+	0x10 - PROM/51
+	0x08 - CALPAK/52
+	0x04 - VATs/53
+	0x02 - FP RLY/54
+	0x01 - ADU/55
+
+0x1c:	RPM / 25
+
+0x1f:	seems to affect displayed RPM (0x20 gives 'correct' displayed value)
+
+0x25:	CTS ADC counts
+0x26:	MAP (correlation TBD)
+
+0x2d:	MAP ADC counts
+
+0x33:	IAT ADC counts
+0x34:	vehicle speed in mph
+
+0x36:	0x80 - single fire flag
+
+0x3e:	O2 sensor voltage 1LSB = 4.42mV (unit is ADC counts)
+
+0x45:	battery voltage * 10
+0x45:	fuel pump voltage * 10
+
+0x48:	TPS ADC counts
+0x49:	TPS (0-255)
+
+0x7e:	IAT (correlation TBD)
+
+0x8a:	async injector pulsewidth high byte (units TBD)
+0x8b:	async injector pulsewidth low byte
+
+0xa3:	block learn multiplier (BLM)
+0xa4:	integrator (INT)
+0xa5:	commanded AFR * 10
+
+0xa7:	sync injector pulsewidth high byte (units TBD)
+0xa8:	async injector pulsewidth low byte
+
+0xb4:	0x80 - EGR flag
+
+0xcc:	0x80 - 2bar MAP flag
+	0x40 - 3bar MAP flag
+	0x10 - MPFI flag
+	Low nybble - cylinder count
+
+0xe0:	Malfunction codes (column 3)
+	0x80 - DRP/12
+	0x40 - O2/13
+	0x20 - CTS HI/14
+	0x10 - CTS LO/15
+	0x08 - TPS HI/21
+	0x04 - TPS LO/22
+	0x02 - IAT LO/23
+	0x01 - VSS/24
+0xe1:	Malfunction codes (column 3)
+	0x80 - IAT HI/25
+	0x10 - MAP HI/33
+	0x08 - MAP LO/34
+	0x01 - EST/42
+0xe2:	Malfunction codes (column 3)
+	0x80 - ESC/43
+	0x40 - O2 LN/44
+	0x20 - O2 RH/45
+	0x10 - PROM/51
+	0x08 - CALPAK/52
+	0x04 - VATs/53
+	0x02 - FP RLY/54
+	0x01 - ADU/55
+0xe3:	CTS - celcius = (N * 0.75) - 40
+
+0xeb:	ECM uptime high byte (seconds)
+0xec:	ECM uptime low byte (seconds)
+
+0xfc:	0x80 - valet flag
+0xfd:	IAC step count
+
+
+EBL status byte:
+	low 3 bits - current flash bank
+
+MISSING:
+
+Knock count
+Spark retard
+Boost
+
+
+
+Observations:
+
+
+0x18-0x19:
+	16-bit interval between tach pulses measured using a 16.4kHz clock. 
+	Divide 984000 by this value to get RPM. May be zero(?) or 0xffff if the
+	engine is not running.
+	Seen also at 0x60, similar value at 0x64.
+
+WRONG 0x21:
+	CTS ADC counts
+
+
+
+
+From Bob@DynamicEFI:
+
+To test the packet checksum, add together every byte (including the header) except the checksum bytes. The calculated value from the packet data needs to match the two checksum bytes sent at the end of the packet.
+
+- Engine speed
+
+0x1C   RPM = N * 25
+
+Once over 6375 RPM can switch to this parameter:
+
+0xF3   RPM = N * 31.25
+
+- Vehicle speed
+
+0x34   MPH = N * 1
+
+- Coolant temperature
+
+0xE3   øC = (N * .75) - 40
+
+- Battery voltage
+
+0x45   Volts = N / 10
+
+- SES master state / error bits
+
+0x0B, bit 0    set when SES on
+
+- ADC inputs
+
+10 bits per channel, right justified in 2 bytes per channel (channel 0 first)
