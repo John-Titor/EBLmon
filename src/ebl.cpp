@@ -27,11 +27,9 @@
  */
 
 /**
- * @file comms.cpp
+ * @file ebl.cpp
  *
- * Serial communications task.
- *
- * This task handles EBL output messages.
+ * EBL protocol decoder.
  */
 
 #include "EBLmon.h"
@@ -39,16 +37,7 @@
 
 namespace EBL
 {
-void decode(uint8_t c);
-bool was_updated();
-
-unsigned engine_speed();
-unsigned ground_speed();
-float oil_pressure();
-float water_temperature();
-float voltage();
-bool ses_set();
-const char *dtc_string(uint8_t index);
+bool        connected = false;
 
 uint8_t     byte_0b;
 uint8_t     byte_12;
@@ -255,6 +244,12 @@ ses_set()
 }
 
 const char *
+status()
+{
+
+}
+
+const char *
 dtc_string(uint8_t index)
 {
     // sort into priority order
@@ -343,24 +338,3 @@ dtc_string(uint8_t index)
 }
 } // namespace EBL
 
-typedef OS::process<OS_PRIO_COMMS, 1024> TCommsProc;
-TCommsProc CommsProc;
-
-namespace OS
-{
-template <>
-OS_PROCESS void TCommsProc::exec()
-{
-    /* XXX do serial init */
-
-    for (;;) {
-        uint8_t c;
-
-        // block waiting for data
-        gBoard->com_read(&c, 1, true);
-
-        // run the decode state machine
-        EBL::decode(c);
-    }
-}
-}

@@ -62,6 +62,9 @@ endif
 #
 # libopencm3
 #
+# Rebuilding the whole thing every time is a bit gross, but
+# better than the alternatives. Should find something simpler...
+#
 LCM3		 = ext/libopencm3
 LCM3_URL	 = https://github.com/libopencm3/libopencm3.git
 ifeq ($(wildcard $(LCM3)),)

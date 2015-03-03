@@ -41,12 +41,12 @@
 #include "EBLmon.h"
 
 class Board;
-EXTERN Board *gBoard;
+extern Board *gBoard;
 
 /*
  * The board support code must export the m2 event source.
  */
-EXTERN uint8_t m2_board_es(m2_p ep, uint8_t msg);
+extern uint8_t m2_board_es(m2_p ep, uint8_t msg);
 
 /**
  * Abstract class that board drivers inherit.

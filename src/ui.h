@@ -44,13 +44,13 @@
  */
 extern "C" {
 
-M2_EXTERN_ALIGN(ui_status);
-extern const void *const ui_fonts[];
+    M2_EXTERN_ALIGN(ui_status);
+    extern const void *const ui_fonts[];
 
-extern const char *ui_coolant_temperature;
-extern const char *ui_oil_pressure;
-extern const char *ui_battery_voltage;
-extern const char *ui_afr;
-extern const char *ui_status_text;
+    extern const char *ui_coolant_temperature;
+    extern const char *ui_oil_pressure;
+    extern const char *ui_battery_voltage;
+    extern const char *ui_afr;
+    extern const char *ui_status_text;
 
 }

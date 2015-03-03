@@ -37,45 +37,42 @@
 #include "board.h"
 #include "ui.h"
 
-typedef OS::process<OS_PRIO_GUI, 1024> TUIProc;
-TUIProc UIProc;
-
-namespace OS
+namespace UI
 {
-template <>
-OS_PROCESS void TUIProc::exec()
-{
-    u8g_t u8g;
+u8g_t u8g;
 
+void
+init()
+{
     /* graphics driver init */
     u8g_Init(&u8g, gBoard->u8g_dev());
 
     /* m2tk init */
     m2_Init(&ui_status,         /* UI root */
-            m2_board_es,		/* event source */
-            m2_eh_4bd,		    /* event handler */
-            m2_gh_u8g_bfs);		/* UI style */
+            m2_board_es,        /* event source */
+            m2_eh_4bd,          /* event handler */
+            m2_gh_u8g_bfs);     /* UI style */
     m2_SetU8g(&u8g, m2_u8g_box_icon);
 
     for (unsigned i = 0; ui_fonts[i] != NULL; i++) {
         m2_SetFont(i, ui_fonts[i]);
     }
+}
 
+void
+tick()
+{
+    m2_CheckKey();
 
-    for (;;) {
-        m2_CheckKey();
+    if (m2_HandleKey()) {
+        /* picture loop */
+        u8g_FirstPage(&u8g);
 
-        if (m2_HandleKey()) {
-            /* picture loop */
-            u8g_FirstPage(&u8g);
-
-            do {
-                m2_Draw();
-                m2_CheckKey();
-            } while (u8g_NextPage(&u8g));
-        }
-
-        sleep(10);
+        do {
+            m2_Draw();
+            m2_CheckKey();
+        } while (u8g_NextPage(&u8g));
     }
 }
-}
+
+} // namespace UI

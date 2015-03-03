@@ -32,15 +32,23 @@
  * Application startup logic.
  */
 
-#include "EBLmon.h"
+//#include "stm32f10x.h"
+//#include "pin.h"
+
 #include "board.h"
 
-/* initialiser list */
-extern unsigned long __ctors_start__;
-extern unsigned long __ctors_end__;
+typedef OS::process<OS::pr0, 1000> TGUIProc;
+typedef OS::process<OS::pr1, 1000> TCommsProc;
+typedef OS::process<OS::pr2, 1000> TLEDProc;
 
-extern "C" int
-main(void)
+TGUIProc GUIProc;
+TCommsProc CommsProc;
+TLEDProc LEDProc;
+
+OS::TEventFlag msTick;
+
+extern "C" void
+main()
 {
     /* XXX debugging */
     gBoard->led_set(true);
@@ -51,33 +59,51 @@ main(void)
     OS::run();
 }
 
-typedef OS::process<OS_PRIO_LED, 200> TLEDProc;
-TLEDProc LEDProc;
-
 namespace OS
 {
-TEventFlag TimerEvent;
+template <>
+OS_PROCESS void TGUIProc::exec()
+{
+    UI::init();
+
+    for (;;) {
+        UI::tick();
+        OS::sleep(10);
+    }
+}
+
+template <>
+OS_PROCESS void TCommsProc::exec()
+{
+    for (;;) {
+        uint8_t c;
+
+        // block waiting for data
+        gBoard->com_read(&c, 1, true);
+
+        // run the decode state machine
+        EBL::decode(c);
+    }
+}
 
 template <>
 OS_PROCESS void TLEDProc::exec()
 {
-    auto count = 0;
-
     for (;;) {
-        if (count++ > 125) {
-            gBoard->led_toggle();     /* LED on/off */
-            count = 0;
-        }
-
-        TimerEvent.wait();
+OS: sleep(125);
+        gBoard->led_toggle();
     }
 }
+}
 
-void
-system_timer_user_hook()
+void OS::system_timer_user_hook()
 {
-    /* fire the timer event once per millisecond */
-    TimerEvent.signal_isr();
+    msTick.signal_isr();
 }
 
+#if scmRTOS_IDLE_HOOK_ENABLE
+void OS::idle_process_user_hook()
+{
+    __WFI();
 }
+#endif

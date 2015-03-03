@@ -37,22 +37,29 @@
 #include <stdio.h>
 #include <scmRTOS.h>
 
-#ifdef __cplusplus
-# define EXTERN extern "C"
-#else
-# define EXTERN extern
-#endif
-
 #define debug(fmt, args...)	do { printf(fmt "\r\n", ##args); } while(0)
 
-/*
- * Process list, must match scmRTOS_PROCESS_COUNT
- */
-#define OS_PRIO_LED	OS::pr0
-#define OS_PRIO_COMMS	OS::pr1
-#define OS_PRIO_GUI	OS::pr2
-
-/*
- * Compiler niceties
- */
 #define __unused	__attribute__((unused))
+#define __noreturn	__attribute__((noreturn))
+
+extern OS::TEventFlag msTick;
+
+namespace UI
+{
+extern void init();
+extern void tick();
+}
+
+namespace EBL
+{
+extern void decode(uint8_t c);
+extern bool was_updated();
+extern unsigned engine_speed();
+extern unsigned ground_speed();
+extern float oil_pressure();
+extern float water_temperature();
+extern float voltage();
+extern bool ses_set();
+extern const char *status();
+extern const char *dtc_string(uint8_t index);
+}
