@@ -265,6 +265,6 @@ reformat:
 	--lineend=linux \
 	--suffix=none \
 	--ignore-exclude-errors-x \
-	src/*.c src/*.cpp src/*.h
+	src/*.cpp src/*.h
 
 -include $(DEPS)

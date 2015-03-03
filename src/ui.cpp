@@ -58,22 +58,29 @@ const void *const ui_fonts[] = {
     NULL
 };
 
+char coolant_temperature[8] = {'-', '\0'};
+char oil_pressure[8] = {'-', '\0'};
+char battery_voltage[8] = {'-', '\0'};
+char air_fuel_ratio[8] = {'-', '\0'};
+char ebl_status[22] = {'N', 'O', 'T', ' ', 'C', 'O', 'N', 'N', 'E', 'C', 'T', 'E', 'D', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '\0'};
+
 void
 init()
 {
-    /* graphics driver init */
+    // graphics driver init
     u8g_Init(&u8g, gBoard->u8g_dev());
 
-    /* m2tk init */
-    m2_Init(&ui_status,         /* UI root */
-            m2_board_es,        /* event source */
-            m2_eh_4bd,          /* event handler */
-            m2_gh_u8g_bfs);     /* UI style */
+    // m2tk init
+    m2_Init(&ui_status,         // UI root
+            m2_board_es,        // event source
+            m2_eh_4bd,          // event handler
+            m2_gh_u8g_bfs);     // UI style
     m2_SetU8g(&u8g, m2_u8g_box_icon);
 
     for (unsigned i = 0; ui_fonts[i] != NULL; i++) {
         m2_SetFont(i, ui_fonts[i]);
     }
+
 }
 
 void
@@ -90,10 +97,14 @@ tick()
             m2_CheckKey();
         } while (u8g_NextPage(&u8g));
     }
+
+    if (EBL::was_updated()) {
+
+    }
 }
 
 // Top-level settings menu
-// 
+//
 static M2_LABEL(_settings_title, "f1", "Settings");
 static M2_ROOT(_settings_status, "f0", "DONE", &ui_status);
 static M2_LIST(_settings_list) = {
@@ -105,32 +116,32 @@ static M2_ALIGN(_settings, "-0|2W64H63", &_settings_vlist);
 
 // Status display - Four-quadrant display plus status bar
 //
-const char *ui_coolant_temperature = "100\xb0";
-const char *ui_oil_pressure = "50#";
-const char *ui_battery_voltage = "12.9v";
-const char *ui_afr = "11.9";
-const char *ui_status_text = "OK                   ";
+const char *ui_cell_1_text = &coolant_temperature[0];
+const char *ui_cell_2_text = &oil_pressure[0];
+const char *ui_cell_3_text = &battery_voltage[0];
+const char *ui_cell_4_text = &air_fuel_ratio[0];
+const char *ui_status_text = &ebl_status[0];
 
-static M2_LABELPTR(_status_coolant_temp_, "f1", &ui_coolant_temperature);
-static M2_ALIGN(_status_coolant_temp, "x0y40w64h24", &_status_coolant_temp_);
+static M2_LABELPTR(_status_cell_1_, "f1", &ui_cell_1_text);
+static M2_ALIGN(_status_cell_1, "x0y40w64h24", &_status_cell_1_);
 
-static M2_LABELPTR(_status_oil_pressure_, "f1", &ui_oil_pressure);
-static M2_ALIGN(_status_oil_pressure, "x64y40w64h24", &_status_oil_pressure_);
+static M2_LABELPTR(_status_cell_2_, "f1", &ui_cell_2_text);
+static M2_ALIGN(_status_cell_2, "x64y40w64h24", &_status_cell_2_);
 
-static M2_LABELPTR(_status_voltage_, "f1", &ui_battery_voltage);
-static M2_ALIGN(_status_voltage, "x0y14w64h24", &_status_voltage_);
+static M2_LABELPTR(_status_cell_3_, "f1", &ui_cell_3_text);
+static M2_ALIGN(_status_cell_3, "x0y14w64h24", &_status_cell_3_);
 
-static M2_LABELPTR(_status_afr_, "f1", &ui_afr);
-static M2_ALIGN(_status_afr, "x64y14w64h24", &_status_afr_);
+static M2_LABELPTR(_status_cell_4_, "f1", &ui_cell_4_text);
+static M2_ALIGN(_status_cell_4, "x64y14w64h24", &_status_cell_4_);
 
 static void _go_settings(m2_el_fnarg_p fnarg) { m2_SetRoot(&_settings); }
 static M2_BUTTONPTR(_status_settings,     "x0y0f0", &ui_status_text, &_go_settings);
 
 static M2_LIST(_status_list) = {
-    &_status_coolant_temp,
-    &_status_oil_pressure,
-    &_status_voltage,
-    &_status_afr,
+    &_status_cell_1,
+    &_status_cell_2,
+    &_status_cell_3,
+    &_status_cell_4,
     &_status_settings
 };
 
