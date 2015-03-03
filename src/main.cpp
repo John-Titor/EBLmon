@@ -32,9 +32,6 @@
  * Application startup logic.
  */
 
-//#include "stm32f10x.h"
-//#include "pin.h"
-
 #include "board.h"
 
 typedef OS::process<OS::pr0, 1000> TGUIProc;
@@ -50,17 +47,18 @@ OS::TEventFlag msTick;
 extern "C" void
 main()
 {
-    /* XXX debugging */
+    // condfigure the board
     gBoard->led_set(true);
     gBoard->com_init(57600);
-    //debug("EBLmon");
 
-    /* and start the OS */
+    // and start the OS
     OS::run();
 }
 
 namespace OS
 {
+
+// User interface process, run the LCD and controls
 template <>
 OS_PROCESS void TGUIProc::exec()
 {
@@ -72,6 +70,7 @@ OS_PROCESS void TGUIProc::exec()
     }
 }
 
+// Comms process, handle incoming data from the ECU
 template <>
 OS_PROCESS void TCommsProc::exec()
 {
@@ -86,11 +85,12 @@ OS_PROCESS void TCommsProc::exec()
     }
 }
 
+// Heartbeat process
 template <>
 OS_PROCESS void TLEDProc::exec()
 {
     for (;;) {
-OS: sleep(125);
+        OS::sleep(125);
         gBoard->led_toggle();
     }
 }
