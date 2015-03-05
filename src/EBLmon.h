@@ -42,8 +42,6 @@
 #define __unused	__attribute__((unused))
 #define __noreturn	__attribute__((noreturn))
 
-extern OS::TEventFlag msTick;
-
 namespace UI
 {
 extern void init();
@@ -64,4 +62,8 @@ extern bool ses_set();
 extern bool engine_running();
 extern const char *status();
 extern const char *dtc_string(uint8_t index);
+
+extern unsigned rx_count;
+extern unsigned good_packets;
+extern unsigned bad_packets;
 }

@@ -34,6 +34,12 @@
 
 #include "board.h"
 
+extern "C" {
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/spi.h>
+}
 typedef OS::process<OS::pr0, 1000> TGUIProc;
 typedef OS::process<OS::pr1, 1000> TCommsProc;
 typedef OS::process<OS::pr2, 1000> TLEDProc;
@@ -41,8 +47,6 @@ typedef OS::process<OS::pr2, 1000> TLEDProc;
 TGUIProc GUIProc;
 TCommsProc CommsProc;
 TLEDProc LEDProc;
-
-OS::TEventFlag msTick;
 
 extern "C" void
 main()
@@ -90,15 +94,15 @@ template <>
 OS_PROCESS void TLEDProc::exec()
 {
     for (;;) {
-        OS::sleep(125);
+        OS::sleep(500);
         gBoard->led_toggle();
+        debug("%u com %u rx  %u good %u bad", gBoard->com_interrupts, EBL::rx_count, EBL::good_packets, EBL::bad_packets);
     }
 }
 }
 
 void OS::system_timer_user_hook()
 {
-    msTick.signal_isr();
 }
 
 #if scmRTOS_IDLE_HOOK_ENABLE

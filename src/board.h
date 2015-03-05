@@ -131,6 +131,8 @@ public:
      */
     u8g_dev_t                   *u8g_dev() { return _u8g_dev; }
 
+    unsigned                    com_interrupts = 0;
+
 protected:
     /** graphics driver */
     u8g_dev_t                   *_u8g_dev;

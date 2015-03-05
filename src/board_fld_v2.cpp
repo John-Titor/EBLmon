@@ -37,6 +37,7 @@ extern "C" {
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/cm3/nvic.h>
 }
 
 #include <stdio.h>
@@ -155,6 +156,7 @@ Board_FLD_V2::com_init(unsigned speed)
 
     /* enable receive interrupt */
     usart_enable_rx_interrupt(USART1);
+    nvic_enable_irq(NVIC_USART1_IRQ);
 
     /* and enable the UART */
     usart_enable(USART1);
@@ -178,6 +180,8 @@ OS_INTERRUPT void
 usart1_isr(void)
 {
     OS::scmRTOS_ISRW_TYPE ISR;
+
+    gBoard->com_interrupts++;
 
     /* receiver not empty? */
     if (usart_get_flag(USART1, USART_SR_RXNE))

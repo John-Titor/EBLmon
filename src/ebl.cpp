@@ -39,12 +39,14 @@
 
 namespace EBL
 {
-bool        connected = false;
 
 uint8_t     mem[256];
 uint16_t    adc[8];
 
 bool        updated = false;
+unsigned    rx_count = 0;
+unsigned    good_packets = 0;
+unsigned    bad_packets = 0;
 
 enum {
     WAIT_H1,
@@ -62,6 +64,7 @@ void
 decode(uint8_t c)
 {
     running_sum += c;
+    rx_count++;
 
     switch (state) {
     case WAIT_H1:
@@ -127,7 +130,10 @@ decode(uint8_t c)
 
         // should be the high byte of the running checksum
         if (running_sum == (c << 8)) {
-            updated = true;
+            //updated = true;
+            good_packets++;
+        } else {
+            bad_packets++;
         }
 
         state = WAIT_H1;
