@@ -32,6 +32,7 @@ AS		 = $(PREFIX)gcc
 CXX		 = $(PREFIX)g++
 LD		 = $(PREFIX)g++
 OBJCOPY		 = $(PREFIX)objcopy
+SIZE		 = $(PREFIX)size
 ARCH_FLAGS	 = -mthumb -mcpu=cortex-m3 -msoft-float
 
 EXTRA_CFLAGS	 =
@@ -189,6 +190,7 @@ ASFLAGS		 = $(ARCH_FLAGS) \
 		   $(addprefix -I,$(INCDIRS)) \
 		   -D__ASSEMBLER__
 
+STDLIBS		 = m c gcc nosys
 LDSCRIPT	 = stm32f103rbt6.ld ext/libopencm3/lib/stm32/f1/libopencm3_stm32f1.ld
 LDFLAGS		 = $(ARCH_FLAGS) \
 		   --static \
@@ -196,12 +198,11 @@ LDFLAGS		 = $(ARCH_FLAGS) \
 		   -l $(LCM3_LIB) \
 		   -nostartfiles \
 		   -nostdlib \
-		   -Wl,--start-group \
-		   -lnosys -lm -lc -lgcc \
-		   -Wl,--end-group \
+		   $(addprefix -l,$(STDLIBS)) \
 		   -Wl,--gc-sections \
 		   $(addprefix -T,$(LDSCRIPT)) \
 		   -Wl,-Map=$(BUILDDIR)/$(PRODUCT).map,--cref
+
 
 # Build debugging
 ifeq ($(V),)
@@ -219,6 +220,7 @@ upload: $(BUILDDIR)/$(PRODUCT).bin $(UPLOADER)
 $(BUILDDIR)/$(PRODUCT).elf: $(OBJS) $(LDSCRIPT) $(GLOBAL_DEPS) $(LCM3)
 	@echo LD $(notdir $@)
 	$(Q) $(LD) -o $@ $(OBJS) $(LDFLAGS)
+	@$(SIZE) $@
 
 $(BUILDDIR)/%.o: %.c $(GLOBAL_DEPS)
 	@echo CC $(notdir $@)

@@ -198,18 +198,13 @@ usart1_isr(void)
     }
 }
 
-int
-_write(int file, char *ptr, int len)
+extern "C" int
+_write(int file __unused, char *ptr, int len)
 {
-    if (file == 1) {
-        for (auto i = 0; i < len; i++)
-            usart_send_blocking(USART1, ptr[i]);
+    for (auto i = 0; i < len; i++)
+        usart_send_blocking(USART1, *ptr++);
 
-        return len;
-    }
-
-    errno = EIO;
-    return -1;
+    return len;
 }
 
 /****************************************************************************
