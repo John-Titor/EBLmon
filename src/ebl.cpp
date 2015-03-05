@@ -35,21 +35,14 @@
 #include "EBLmon.h"
 #include "board.h"
 
+#include <math.h>
+
 namespace EBL
 {
 bool        connected = false;
 
-uint8_t     byte_0b;
-uint8_t     byte_12;
-uint8_t     byte_13;
-uint8_t     byte_14;
-uint8_t     byte_1c;
-uint8_t     byte_34;
-uint8_t     byte_45;
-uint8_t     byte_e3;
-uint8_t     byte_f3;
-
-uint16_t    adc[3];
+uint8_t     mem[256];
+uint16_t    adc[8];
 
 bool        updated = false;
 
@@ -64,7 +57,6 @@ enum {
 }           state = WAIT_H1;
 unsigned    bytes;
 uint16_t    running_sum;
-uint8_t     check_1;
 
 void
 decode(uint8_t c)
@@ -92,46 +84,7 @@ decode(uint8_t c)
         break;
 
     case ARRAY:
-        switch (bytes) {
-        case 0x0b:
-            byte_0b = c;
-            break;
-
-        case 0x12:
-            byte_12 = c;
-            break;
-
-        case 0x13:
-            byte_13 = c;
-            break;
-
-        case 0x14:
-            byte_14 = c;
-            break;
-
-        case 0x1c:
-            byte_1c = c;
-            break;
-
-        case 0x34:
-            byte_34 = c;
-            break;
-
-        case 0x45:
-            byte_45 = c;
-            break;
-
-        case 0xe3:
-            byte_e3 = c;
-            break;
-
-        case 0xf3:
-            byte_f3 = c;
-            break;
-
-        default:
-            break;
-        }
+        mem[bytes] = c;
 
         if (bytes++ == 256) {
             state = STATUS;
@@ -160,15 +113,20 @@ decode(uint8_t c)
         break;
 
     case WAIT_C1:
-        check_1 = c;
+        // subtract once because we added it above, and once more because this
+        // is the low byte of the expected checksum (should leave the low byte
+        // equal to zero
+        running_sum -= c;
+        running_sum -= c;
         state = WAIT_C2;
         break;
 
     case WAIT_C2:
-        running_sum -= (check_1 + c);
+        // subtract once because we added it above
+        running_sum -= c;
 
-        if (((running_sum % 0xff) == check_1) &&
-            ((running_sum >> 8) == c)) {
+        // should be the high byte of the running checksum
+        if (running_sum == (c << 8)) {
             updated = true;
         }
 
@@ -196,16 +154,16 @@ unsigned
 engine_speed()
 {
     // below 6375 rpm could use byte_1c * 25...
-    return byte_f3 * 31U + byte_f3 / 4;
+    return mem[0xf3] * 31U + mem[0xf3] / 4;
 }
 
 unsigned
 ground_speed()
 {
-    return byte_34;
+    return mem[0x34];
 }
 
-float
+unsigned
 oil_pressure()
 {
     // 10-bit ADC reading 0-5V
@@ -214,39 +172,63 @@ oil_pressure()
     // 4.5V = 921.6 counts
     // span is 819.2 counts, conversion is / 8.192
 
-    float pressure = adc[2] - 102.4F;
+    unsigned counts = adc[2];
 
-    if (pressure < 0) {
-        pressure = 0;
+    // XXX should record a local DTC for out-of-bounds values?
+    if (counts > 102) {
+        counts -= 102;
+    } else if (counts > 921) {
+        counts = 921;
     }
 
-    pressure /= 8.192F;
+    float pressure = counts / 8.192F;
 
-    return pressure;
+    return roundf(pressure);
 }
 
-float
+unsigned
 water_temperature()
 {
-    return byte_e3 * 0.75F - 40;
+    float temperature = mem[0xe3] * 0.75F - 40;
+
+    if (temperature < 0) {
+        return 0;
+    }
+    return roundf(temperature);
 }
 
-float
+unsigned
 voltage()
 {
-    return byte_45 / 10.0F;
+    return mem[0x45];
+}
+
+unsigned
+afr()
+{
+    // 10-bit ADC reading 0-5V
+    // Zeitronix AFR default output mode, AFR is 2 * voltage + 9.6
+    // 0V = 9.6:1
+    // 5V = 19.6:1
+    // span is 1024 counts, conversion is / 102.4 + 9.6
+
+    unsigned counts = adc[1];
+
+    float ratio = counts / 102.4F + 9.6F;
+
+    return roundf(ratio * 10);
 }
 
 bool
 ses_set()
 {
-    return byte_0b & 0x1;
+    return mem[0x0b] & 0x1;
 }
 
-const char *
-status()
+bool
+engine_running()
 {
-
+    return mem[0x01] & 0x80;
 }
 
 const char *
@@ -254,83 +236,83 @@ dtc_string(uint8_t index)
 {
     // sort into priority order
 
-    if ((byte_12 & 0x01) && (index-- == 0)) {
+    if ((mem[0x12] & 0x01) && (index-- == 0)) {
         return "VSS   ";
     }
 
-    if ((byte_12 & 0x02) && (index-- == 0)) {
+    if ((mem[0x12] & 0x02) && (index-- == 0)) {
         return "IAT LO";
     }
 
-    if ((byte_12 & 0x04) && (index-- == 0)) {
+    if ((mem[0x12] & 0x04) && (index-- == 0)) {
         return "TPS LO";
     }
 
-    if ((byte_12 & 0x08) && (index-- == 0)) {
+    if ((mem[0x12] & 0x08) && (index-- == 0)) {
         return "TPS HI";
     }
 
-    if ((byte_12 & 0x10) && (index-- == 0)) {
+    if ((mem[0x12] & 0x10) && (index-- == 0)) {
         return "CTS LO";
     }
 
-    if ((byte_12 & 0x20) && (index-- == 0)) {
+    if ((mem[0x12] & 0x20) && (index-- == 0)) {
         return "CTS HI";
     }
 
-    if ((byte_12 & 0x40) && (index-- == 0)) {
+    if ((mem[0x12] & 0x40) && (index-- == 0)) {
         return "O2    ";
     }
 
-    if ((byte_12 & 0x80) && (index-- == 0)) {
+    if ((mem[0x12] & 0x80) && (index-- == 0)) {
         return "DRP   ";
     }
 
-    if ((byte_13 & 0x01) && (index-- == 0)) {
+    if ((mem[0x13] & 0x01) && (index-- == 0)) {
         return "EST   ";
     }
 
-    if ((byte_13 & 0x08) && (index-- == 0)) {
+    if ((mem[0x13] & 0x08) && (index-- == 0)) {
         return "MAP LO";
     }
 
-    if ((byte_13 & 0x10) && (index-- == 0)) {
+    if ((mem[0x13] & 0x10) && (index-- == 0)) {
         return "MAP HI";
     }
 
-    if ((byte_13 & 0x80) && (index-- == 0)) {
+    if ((mem[0x13] & 0x80) && (index-- == 0)) {
         return "IAT HI";
     }
 
-    if ((byte_14 & 0x01) && (index-- == 0)) {
+    if ((mem[0x14] & 0x01) && (index-- == 0)) {
         return "ADU   ";
     }
 
-    if ((byte_14 & 0x02) && (index-- == 0)) {
+    if ((mem[0x14] & 0x02) && (index-- == 0)) {
         return "FP RLY";
     }
 
-    if ((byte_14 & 0x04) && (index-- == 0)) {
+    if ((mem[0x14] & 0x04) && (index-- == 0)) {
         return "VATS  ";
     }
 
-    if ((byte_14 & 0x08) && (index-- == 0)) {
+    if ((mem[0x14] & 0x08) && (index-- == 0)) {
         return "CALPAK";
     }
 
-    if ((byte_14 & 0x10) && (index-- == 0)) {
+    if ((mem[0x14] & 0x10) && (index-- == 0)) {
         return "PROM  ";
     }
 
-    if ((byte_14 & 0x20) && (index-- == 0)) {
+    if ((mem[0x14] & 0x20) && (index-- == 0)) {
         return "O2 RH ";
     }
 
-    if ((byte_14 & 0x40) && (index-- == 0)) {
+    if ((mem[0x14] & 0x40) && (index-- == 0)) {
         return "O2 LN ";
     }
 
-    if ((byte_14 & 0x80) && (index-- == 0)) {
+    if ((mem[0x14] & 0x80) && (index-- == 0)) {
         return "ESC   ";
     }
 

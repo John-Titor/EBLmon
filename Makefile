@@ -152,6 +152,7 @@ CFLAGS		 = $(ARCH_FLAGS) \
 		   -std=c11 \
 		   -Os \
 		   -Wall -Wextra \
+		   -Wno-unused-parameter \
 		   -fno-common \
 		   -ffreestanding \
 		   -ffunction-sections -fdata-sections \
@@ -174,6 +175,7 @@ CXXFLAGS	 = $(ARCH_FLAGS) \
 		   -fshort-enums \
 		   -Wpointer-arith \
 		   -Wredundant-decls \
+		   -Wno-unused-parameter \
 		   -Wshadow \
 		   -Wcast-qual \
 		   -Wcast-align \
@@ -195,7 +197,7 @@ LDFLAGS		 = $(ARCH_FLAGS) \
 		   -nostartfiles \
 		   -nostdlib \
 		   -Wl,--start-group \
-		   -lnosys -lc -lgcc \
+		   -lnosys -lm -lc -lgcc \
 		   -Wl,--end-group \
 		   -Wl,--gc-sections \
 		   $(addprefix -T,$(LDSCRIPT)) \

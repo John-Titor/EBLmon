@@ -54,12 +54,14 @@ namespace EBL
 {
 extern void decode(uint8_t c);
 extern bool was_updated();
-extern unsigned engine_speed();
-extern unsigned ground_speed();
-extern float oil_pressure();
-extern float water_temperature();
-extern float voltage();
+extern unsigned engine_speed();		// rpm
+extern unsigned ground_speed();		// mph
+extern unsigned oil_pressure();		// psi
+extern unsigned water_temperature();	// degrees C
+extern unsigned voltage();		// decivolts
+extern unsigned afr();			// afr * 10
 extern bool ses_set();
+extern bool engine_running();
 extern const char *status();
 extern const char *dtc_string(uint8_t index);
 }

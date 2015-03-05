@@ -49,7 +49,7 @@ namespace UI
 u8g_t u8g;
 
 // root of the UI tree
-M2_EXTERN_ALIGN(ui_status);
+M2_EXTERN_ALIGN(ui_gauges);
 
 // fonts
 const void *const ui_fonts[] = {
@@ -58,7 +58,9 @@ const void *const ui_fonts[] = {
     NULL
 };
 
-char coolant_temperature[8] = {'-', '\0'};
+char road_speed[8] = {'-', '\0'};
+char engine_speed[8] = {'-', '\0'};
+char water_temperature[8] = {'-', '\0'};
 char oil_pressure[8] = {'-', '\0'};
 char battery_voltage[8] = {'-', '\0'};
 char air_fuel_ratio[8] = {'-', '\0'};
@@ -71,7 +73,7 @@ init()
     u8g_Init(&u8g, gBoard->u8g_dev());
 
     // m2tk init
-    m2_Init(&ui_status,         // UI root
+    m2_Init(&ui_gauges,         // UI root
             m2_board_es,        // event source
             m2_eh_4bd,          // event handler
             m2_gh_u8g_bfs);     // UI style
@@ -100,52 +102,108 @@ tick()
 
     if (EBL::was_updated()) {
 
+        sprintf(road_speed, "%umph", EBL::ground_speed());
+        sprintf(engine_speed, "%urpm", EBL::engine_speed());
+        sprintf(water_temperature, "%u\xb0", EBL::water_temperature());
+        sprintf(oil_pressure, "%u#", EBL::oil_pressure());
+        sprintf(battery_voltage, "%u.%uv", EBL::voltage() / 10, EBL::voltage() % 10);
+        sprintf(air_fuel_ratio, "%u.%u", EBL::afr() / 10, EBL::afr() % 10);
+
+        if (EBL::ses_set()) {
+            sprintf(ebl_status, "CHECK ENGINE [%s]", EBL::dtc_string(0) ? : "??????");
+        } else if (EBL::engine_running()) {
+            sprintf(ebl_status, "OK                   ");
+        } else {
+            sprintf(ebl_status, "NOT RUNNING          ");
+        }
+
     }
 }
 
-// Top-level settings menu
+
+M2_EXTERN_ALIGN(_top);
+M2_EXTERN_ALIGN(_settings);
+
+const char *ui_status_text = &ebl_status[0];
+
+// Top-level menu
 //
-static M2_LABEL(_settings_title, "f1", "Settings");
-static M2_ROOT(_settings_status, "f0", "DONE", &ui_status);
-static M2_LIST(_settings_list) = {
-    &_settings_title,
-    &_settings_status
+M2_LABEL(_top_title, "f1", "Menu");
+M2_ROOT(_top_settings, "f0", "Settings", &_settings);
+M2_ROOT(_top_done, "f0", "DONE", &ui_gauges);
+M2_LIST(_top_list) = {
+    &_top_title,
+    &_top_settings,
+    &_top_done
 };
-static M2_VLIST(_settings_vlist, NULL, _settings_list);
-static M2_ALIGN(_settings, "-0|2W64H63", &_settings_vlist);
+M2_VLIST(_top_vlist, NULL, _top_list);
+M2_ALIGN(_top, "-0|2W64H63", &_top_vlist);
+
+// Settings menu
+//
+M2_LABEL(_settings_title, "f1", "Settings");
+M2_ROOT(_settings_done, "f0", "DONE", &_top);
+M2_LIST(_settings_list) = {
+    &_settings_title,
+    &_settings_done
+};
+M2_VLIST(_settings_vlist, NULL, _settings_list);
+M2_ALIGN(_settings, "-0|2W64H63", &_settings_vlist);
+
+// Mini-dashboard - speed on top, RPM below
+//
+const char *ui_2cell_1_text = &road_speed[0];
+const char *ui_2cell_2_text = &engine_speed[0];
+
+M2_LABELPTR(_dash_cell_1_, "f1", &ui_2cell_1_text);
+M2_ALIGN(_dash_cell_1, "x0y40w128h24", &_dash_cell_1_);
+
+M2_LABELPTR(_dash_cell_2_, "f1", &ui_2cell_2_text);
+M2_ALIGN(_dash_cell_2, "x0y14w128h24", &_dash_cell_2_);
+
+void _leave_dash(m2_el_fnarg_p fnarg) { m2_SetRootExtended(&_top, 1, 0); }
+M2_BUTTONPTR(_dash_status,     "x0y0f0", &ui_status_text, &_leave_dash);
+
+M2_LIST(_dash_list) = {
+    &_dash_cell_1,
+    &_dash_cell_2,
+    &_dash_status
+};
+
+M2_XYLIST(_dash_vlist, NULL, _dash_list);
+M2_ALIGN(_dash, "-0|2W64H63", &_dash_vlist);
 
 // Status display - Four-quadrant display plus status bar
 //
-const char *ui_cell_1_text = &coolant_temperature[0];
-const char *ui_cell_2_text = &oil_pressure[0];
-const char *ui_cell_3_text = &battery_voltage[0];
-const char *ui_cell_4_text = &air_fuel_ratio[0];
-const char *ui_status_text = &ebl_status[0];
+const char *_gauge_1_text = &water_temperature[0];
+const char *_gauge_2_text = &oil_pressure[0];
+const char *_gauge_3_text = &battery_voltage[0];
+const char *_gauge_4_text = &air_fuel_ratio[0];
 
-static M2_LABELPTR(_status_cell_1_, "f1", &ui_cell_1_text);
-static M2_ALIGN(_status_cell_1, "x0y40w64h24", &_status_cell_1_);
+M2_LABELPTR(_gauges_cell_1_, "f1", &_gauge_1_text);
+M2_ALIGN(_gauges_cell_1, "x0y40w64h24", &_gauges_cell_1_);
 
-static M2_LABELPTR(_status_cell_2_, "f1", &ui_cell_2_text);
-static M2_ALIGN(_status_cell_2, "x64y40w64h24", &_status_cell_2_);
+M2_LABELPTR(_gauges_cell_2_, "f1", &_gauge_2_text);
+M2_ALIGN(_gauges_cell_2, "x64y40w64h24", &_gauges_cell_2_);
 
-static M2_LABELPTR(_status_cell_3_, "f1", &ui_cell_3_text);
-static M2_ALIGN(_status_cell_3, "x0y14w64h24", &_status_cell_3_);
+M2_LABELPTR(_gauges_cell_3_, "f1", &_gauge_3_text);
+M2_ALIGN(_gauges_cell_3, "x0y14w64h24", &_gauges_cell_3_);
 
-static M2_LABELPTR(_status_cell_4_, "f1", &ui_cell_4_text);
-static M2_ALIGN(_status_cell_4, "x64y14w64h24", &_status_cell_4_);
+M2_LABELPTR(_gauges_cell_4_, "f1", &_gauge_4_text);
+M2_ALIGN(_gauges_cell_4, "x64y14w64h24", &_gauges_cell_4_);
 
-static void _go_settings(m2_el_fnarg_p fnarg) { m2_SetRoot(&_settings); }
-static M2_BUTTONPTR(_status_settings,     "x0y0f0", &ui_status_text, &_go_settings);
+void _leave_gauges(m2_el_fnarg_p fnarg) { m2_SetRootExtended(&_dash, 1, 0); }
+M2_BUTTONPTR(_gauges_status,     "x0y0f0", &ui_status_text, &_leave_gauges);
 
-static M2_LIST(_status_list) = {
-    &_status_cell_1,
-    &_status_cell_2,
-    &_status_cell_3,
-    &_status_cell_4,
-    &_status_settings
+M2_LIST(_gauges_list) = {
+    &_gauges_cell_1,
+    &_gauges_cell_2,
+    &_gauges_cell_3,
+    &_gauges_cell_4,
+    &_gauges_status
 };
 
-static M2_XYLIST(_status_vlist, NULL, _status_list);
-M2_ALIGN(ui_status, "-0|2W64H63", &_status_vlist);
+M2_XYLIST(_gauges_vlist, NULL, _gauges_list);
+M2_ALIGN(ui_gauges, "-0|2W64H63", &_gauges_vlist);
 
 } // namespace UI
