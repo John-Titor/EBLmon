@@ -53,7 +53,6 @@ public:
     Board_FLD_V2();
 
     virtual void        com_init(unsigned speed) override;
-    virtual void        com_fini() override;
     virtual void        led_set(bool state) override;
     virtual void        led_toggle() override;
 
@@ -61,7 +60,6 @@ public:
     static uint8_t      u8g_board_dev_fn(u8g_t *u8g, u8g_dev_t *dev, uint8_t msg, void *arg);
 
 protected:
-    virtual void        com_tx_start(void) override;
 
 private:
     friend void         usart1_isr(void);
@@ -162,20 +160,6 @@ Board_FLD_V2::com_init(unsigned speed)
     usart_enable(USART1);
 }
 
-void
-Board_FLD_V2::com_fini(void)
-{
-    usart_disable(USART1);
-    usart_disable_rx_interrupt(USART1);
-    usart_disable_tx_interrupt(USART1);
-}
-
-void
-Board_FLD_V2::com_tx_start()
-{
-    usart_enable_tx_interrupt(USART1);
-}
-
 OS_INTERRUPT void
 usart1_isr(void)
 {
@@ -187,26 +171,16 @@ usart1_isr(void)
     if (usart_get_flag(USART1, USART_SR_RXNE))
         board_fld_v2.com_rx(usart_recv(USART1));
 
-    /* transmitter ready? */
-    if (usart_get_flag(USART1, USART_SR_TXE)) {
-
-        uint8_t c;
-
-        if (board_fld_v2.com_tx(c)) {
-            usart_send(USART1, c);
-
-        } else {
-            /* clear TX empty interrupt as we have no data */
-            usart_disable_tx_interrupt(USART1);
-        }
-    }
 }
 
 extern "C" int
 _write(int file __unused, char *ptr, int len)
 {
-    for (auto i = 0; i < len; i++)
+//    TCritSect cs;
+
+    for (auto i = 0; i < len; i++) {
         usart_send_blocking(USART1, *ptr++);
+    }
 
     return len;
 }

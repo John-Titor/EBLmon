@@ -79,10 +79,8 @@ template <>
 OS_PROCESS void TCommsProc::exec()
 {
     for (;;) {
-        uint8_t c;
-
         // block waiting for data
-        gBoard->com_read(&c, 1, true);
+        auto c = gBoard->com_getc();
 
         // run the decode state machine
         EBL::decode(c);

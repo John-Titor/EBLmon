@@ -40,15 +40,16 @@
 namespace EBL
 {
 
-uint8_t     mem[256];
-uint16_t    adc[8];
+uint8_t     ebl_mem[256];
+uint16_t    ebl_adc[8];
 
 bool        updated = false;
-unsigned    rx_count = 0;
-unsigned    good_packets = 0;
-unsigned    bad_packets = 0;
 
-enum {
+volatile unsigned rx_count = 0;
+volatile unsigned good_packets = 0;
+volatile unsigned bad_packets = 0;
+
+enum DecodeState {
     WAIT_H1,
     WAIT_H2,
     ARRAY,
@@ -56,19 +57,21 @@ enum {
     ADC,
     WAIT_C1,
     WAIT_C2
-}           state = WAIT_H1;
-unsigned    bytes;
-uint16_t    running_sum;
+};
 
 void
 decode(uint8_t c)
 {
+    static unsigned running_sum = 0U;
+    static unsigned field_index = 0U;
+    static DecodeState state = WAIT_H1;
+
     running_sum += c;
     rx_count++;
 
     switch (state) {
     case WAIT_H1:
-        if (c == 0xaa) {
+        if (c == 0x55) {
             state = WAIT_H2;
             running_sum = c;
         }
@@ -76,9 +79,9 @@ decode(uint8_t c)
         break;
 
     case WAIT_H2:
-        if (c == 0x55) {
+        if (c == 0xaa) {
             state = ARRAY;
-            bytes = 0;
+            field_index = 0;
 
         } else {
             state = WAIT_H1;
@@ -87,9 +90,9 @@ decode(uint8_t c)
         break;
 
     case ARRAY:
-        mem[bytes] = c;
+        ebl_mem[field_index] = c;
 
-        if (bytes++ == 256) {
+        if (++field_index == 256) {
             state = STATUS;
         }
 
@@ -97,43 +100,44 @@ decode(uint8_t c)
 
     case STATUS:
         state = ADC;    // currently just discard this byte
-        bytes = 0;
+        field_index = 0;
         break;
 
     case ADC:
-        if ((bytes & 1) == 0) {
-            // low byte
-            adc[bytes / 2] = c;
+        if ((field_index & 1) == 0) {
+            ebl_adc[field_index / 2] = c;
 
         } else {
-            adc[bytes / 2] += (uint16_t)c << 8;
+            ebl_adc[field_index / 2] += (uint16_t)c << 8;
         }
 
-        if (bytes++ == 16) {
+        if (++field_index == 16) {
             state = WAIT_C1;
         }
 
         break;
 
     case WAIT_C1:
-        // subtract once because we added it above, and once more because this
-        // is the low byte of the expected checksum (should leave the low byte
-        // equal to zero
+        // subtract this byte from the running sum, since it shouldn't be included
         running_sum -= c;
-        running_sum -= c;
+
+        // this is the high byte of the running sum, so subtract it out
+        running_sum -= (c << 8);
         state = WAIT_C2;
         break;
 
     case WAIT_C2:
-        // subtract once because we added it above
+        // subtract this byte from the running sum, since it shouldn't be included
         running_sum -= c;
 
-        // should be the high byte of the running checksum
-        if (running_sum == (c << 8)) {
+        // ths is the low byte of the running sum, so should be equal
+        if (running_sum == c) {
             //updated = true;
             good_packets++;
+
         } else {
             bad_packets++;
+            debug("bad sum %04x", running_sum);
         }
 
         state = WAIT_H1;
@@ -160,13 +164,13 @@ unsigned
 engine_speed()
 {
     // below 6375 rpm could use byte_1c * 25...
-    return mem[0xf3] * 31U + mem[0xf3] / 4;
+    return ebl_mem[0xf3] * 31U + ebl_mem[0xf3] / 4;
 }
 
 unsigned
 ground_speed()
 {
-    return mem[0x34];
+    return ebl_mem[0x34];
 }
 
 unsigned
@@ -178,11 +182,12 @@ oil_pressure()
     // 4.5V = 921.6 counts
     // span is 819.2 counts, conversion is / 8.192
 
-    unsigned counts = adc[2];
+    unsigned counts = ebl_adc[2];
 
     // XXX should record a local DTC for out-of-bounds values?
     if (counts > 102) {
         counts -= 102;
+
     } else if (counts > 921) {
         counts = 921;
     }
@@ -195,18 +200,19 @@ oil_pressure()
 unsigned
 water_temperature()
 {
-    float temperature = mem[0xe3] * 0.75F - 40;
+    float temperature = ebl_mem[0xe3] * 0.75F - 40;
 
     if (temperature < 0) {
         return 0;
     }
+
     return roundf(temperature);
 }
 
 unsigned
 voltage()
 {
-    return mem[0x45];
+    return ebl_mem[0x45];
 }
 
 unsigned
@@ -218,7 +224,7 @@ afr()
     // 5V = 19.6:1
     // span is 1024 counts, conversion is / 102.4 + 9.6
 
-    unsigned counts = adc[1];
+    unsigned counts = ebl_adc[1];
 
     float ratio = counts / 102.4F + 9.6F;
 
@@ -228,97 +234,97 @@ afr()
 bool
 ses_set()
 {
-    return mem[0x0b] & 0x1;
+    return ebl_mem[0x0b] & 0x1;
 }
 
 bool
 engine_running()
 {
-    return mem[0x01] & 0x80;
+    return ebl_mem[0x01] & 0x80;
 }
 
 const char *
-dtc_string(uint8_t index)
+dtc_string(uint8_t dtc_index)
 {
     // sort into priority order
 
-    if ((mem[0x12] & 0x01) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x01) && (dtc_index-- == 0)) {
         return "VSS   ";
     }
 
-    if ((mem[0x12] & 0x02) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x02) && (dtc_index-- == 0)) {
         return "IAT LO";
     }
 
-    if ((mem[0x12] & 0x04) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x04) && (dtc_index-- == 0)) {
         return "TPS LO";
     }
 
-    if ((mem[0x12] & 0x08) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x08) && (dtc_index-- == 0)) {
         return "TPS HI";
     }
 
-    if ((mem[0x12] & 0x10) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x10) && (dtc_index-- == 0)) {
         return "CTS LO";
     }
 
-    if ((mem[0x12] & 0x20) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x20) && (dtc_index-- == 0)) {
         return "CTS HI";
     }
 
-    if ((mem[0x12] & 0x40) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x40) && (dtc_index-- == 0)) {
         return "O2    ";
     }
 
-    if ((mem[0x12] & 0x80) && (index-- == 0)) {
+    if ((ebl_mem[0x12] & 0x80) && (dtc_index-- == 0)) {
         return "DRP   ";
     }
 
-    if ((mem[0x13] & 0x01) && (index-- == 0)) {
+    if ((ebl_mem[0x13] & 0x01) && (dtc_index-- == 0)) {
         return "EST   ";
     }
 
-    if ((mem[0x13] & 0x08) && (index-- == 0)) {
+    if ((ebl_mem[0x13] & 0x08) && (dtc_index-- == 0)) {
         return "MAP LO";
     }
 
-    if ((mem[0x13] & 0x10) && (index-- == 0)) {
+    if ((ebl_mem[0x13] & 0x10) && (dtc_index-- == 0)) {
         return "MAP HI";
     }
 
-    if ((mem[0x13] & 0x80) && (index-- == 0)) {
+    if ((ebl_mem[0x13] & 0x80) && (dtc_index-- == 0)) {
         return "IAT HI";
     }
 
-    if ((mem[0x14] & 0x01) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x01) && (dtc_index-- == 0)) {
         return "ADU   ";
     }
 
-    if ((mem[0x14] & 0x02) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x02) && (dtc_index-- == 0)) {
         return "FP RLY";
     }
 
-    if ((mem[0x14] & 0x04) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x04) && (dtc_index-- == 0)) {
         return "VATS  ";
     }
 
-    if ((mem[0x14] & 0x08) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x08) && (dtc_index-- == 0)) {
         return "CALPAK";
     }
 
-    if ((mem[0x14] & 0x10) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x10) && (dtc_index-- == 0)) {
         return "PROM  ";
     }
 
-    if ((mem[0x14] & 0x20) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x20) && (dtc_index-- == 0)) {
         return "O2 RH ";
     }
 
-    if ((mem[0x14] & 0x40) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x40) && (dtc_index-- == 0)) {
         return "O2 LN ";
     }
 
-    if ((mem[0x14] & 0x80) && (index-- == 0)) {
+    if ((ebl_mem[0x14] & 0x80) && (dtc_index-- == 0)) {
         return "ESC   ";
     }
 

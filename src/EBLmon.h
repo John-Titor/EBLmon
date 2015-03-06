@@ -63,7 +63,7 @@ extern bool engine_running();
 extern const char *status();
 extern const char *dtc_string(uint8_t index);
 
-extern unsigned rx_count;
-extern unsigned good_packets;
-extern unsigned bad_packets;
+extern volatile unsigned rx_count;
+extern volatile unsigned good_packets;
+extern volatile unsigned bad_packets;
 }

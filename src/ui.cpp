@@ -111,8 +111,10 @@ tick()
 
         if (EBL::ses_set()) {
             sprintf(ebl_status, "CHECK ENGINE [%s]", EBL::dtc_string(0) ? : "??????");
+
         } else if (EBL::engine_running()) {
             sprintf(ebl_status, "OK                   ");
+
         } else {
             sprintf(ebl_status, "NOT RUNNING          ");
         }

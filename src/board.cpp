@@ -39,102 +39,38 @@
  */
 
 void Board::com_init(unsigned speed __unused) {}
-void Board::com_fini() {}
 
-void
-Board::com_write(const uint8_t *data, unsigned count)
+uint8_t
+Board::com_getc(void)
 {
     TCritSect cs;
 
-    while (count) {
-        auto avail = _com_tx_buf.get_free_size();
-
-        /* if we have no tx space, wait for some to free up */
-        if (avail == 0) {
-            _tx_space_avail.wait();
-            continue;
-        }
-
-        if (avail > count)
-            avail = count;
-
-        _com_tx_buf.write(data, avail);
-        data += avail;
-        count -= avail;
-
-        com_tx_start();
-    }
-}
-
-int
-Board::com_read(uint8_t *data, unsigned size, bool wait)
-{
-    TCritSect cs;
-
-    for (;;) {
-        unsigned avail = _com_rx_buf.get_count();
-
-        if (avail != 0) {
-            if (avail > size)
-                avail = size;
-
-            _com_rx_buf.read(data, avail);
-            return avail;
-        }
-
-        if (wait == false) {
-            return 0;
-        }
-
+    while (_rx_tail == _rx_head) {
         _rx_data_avail.wait();
     }
-}
 
-int
-Board::com_write_space()
-{
-    return _com_tx_buf.get_free_size();
-}
+    auto c = _rx_buf[_rx_head];
+    _rx_head = (_rx_head + 1) % _rx_buf_size;
 
-int
-Board::com_read_available()
-{
-    return _com_rx_buf.get_count();
+    return c;
 }
 
 void
 Board::com_rx(uint8_t c)
 {
-    _com_rx_buf.push_back(c);
+    auto next = (_rx_tail + 1) % _rx_buf_size;
 
-    /* wake anyone that might be waiting */
+    // rx buffer overflow, drop oldest byte
+    if (next == _rx_head) {
+        return;
+    }
+
+    _rx_buf[_rx_tail] = c;
+    _rx_tail = next;
+
+    // wake anyone that might be waiting
     _rx_data_avail.signal_isr();
 }
-
-bool
-Board::com_tx(uint8_t &c)
-{
-    auto avail = _com_tx_buf.get_count();
-
-    /* if there is no more data to send, bail now */
-    if (avail == 0)
-        return false;
-
-    /*
-     * Mitigate writer wakeup costs by only signalling that there is
-     * more TX space when at least 8 bytes are free.
-     */
-    if ((_com_tx_buf.get_free_size() - avail) > 8)
-        _tx_space_avail.signal_isr();
-
-    /*
-     * Get the byte we're going to send.
-     */
-    c = _com_tx_buf.pop_front();
-    return true;
-}
-
-void Board::com_tx_start(void) {}
 
 void Board::led_set(bool state __unused) {}
 void Board::led_toggle() {}

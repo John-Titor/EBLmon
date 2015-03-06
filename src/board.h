@@ -73,46 +73,13 @@ public:
     virtual void                com_init(unsigned speed);
 
     /**
-     * Disable the serial port.
-     */
-    virtual void                com_fini();
-
-    /**
-     * Write data to the serial port.
-     *
-     * This function will block until the data has been queued for
-     * transmission.
-     *
-     * @param data              Pointer to the data to write.
-     * @param count             The number of bytes to write.
-     */
-    void                        com_write(const uint8_t *data, unsigned count);
-
-    /**
      * Read data from the serial port.
      *
-     * @param data              Buffer into which data can be read.
-     * @param size              The size of the receive buffer.
-     * @param wait              If true, wait for at least one byte.
-     * @return                  The number of bytes read; zero if no data
-     *                          is waiting.
-     */
-    int                         com_read(uint8_t *data, unsigned size, bool wait = false);
-
-    /**
-     * Check the serial port transmit buffer space.
+     * This function will block until data is available.
      *
-     * @return                  The number of bytes that can be written
-     *                          without blocking.
+     * @return                  Data read from the port.
      */
-    int                         com_write_space();
-
-    /**
-     * Check the serial port receive buffer.
-     *
-     * @return                  The number of bytes available to read.
-     */
-    int                         com_read_available();
+    uint8_t                     com_getc(void);
 
     /**
      * Turn the LED on or off.
@@ -138,12 +105,6 @@ protected:
     u8g_dev_t                   *_u8g_dev;
 
     /**
-     * Called by the generic code when bytes are added to the
-     * transmit buffer.
-     */
-    virtual void                com_tx_start(void);
-
-    /**
      * Called by the board-specific subclass to add a byte
      * to the receive buffer.
      *
@@ -151,19 +112,10 @@ protected:
      */
     void                        com_rx(uint8_t c);
 
-    /**
-     * Called by the board-specific subclass when it wants a
-     * byte to transmit.
-     *
-     * @param c                 The byte to send.
-     * @return                  True if a byte was returned.
-     */
-    bool                        com_tx(uint8_t &c);
-
 private:
-    OS::TEventFlag              _tx_space_avail;
+    static const unsigned       _rx_buf_size = 16;
     OS::TEventFlag              _rx_data_avail;
-
-    usr::ring_buffer<uint8_t, 128> _com_rx_buf;
-    usr::ring_buffer<uint8_t, 128> _com_tx_buf;
+    uint8_t                     _rx_buf[_rx_buf_size];
+    unsigned                    _rx_head = 0;
+    unsigned                    _rx_tail = 0;
 };
