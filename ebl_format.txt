@@ -2,7 +2,7 @@ Data format emitted from the EBL 'serial' pin.
 
 Packet:
 
-	2 byte header {0xaa, 0x55}
+	2 byte header {0x55, 0xaa}
 	256 byte memory dump
 	1 byte EBL hardware status
 	16 byte ADC payload(?)
