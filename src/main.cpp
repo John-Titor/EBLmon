@@ -95,12 +95,10 @@ OS_PROCESS void TLEDProc::exec()
         OS::sleep(500);
         gBoard->led_toggle();
         debug("%u com %u rx  %u good %u bad", gBoard->com_interrupts, EBL::rx_count, EBL::good_packets, EBL::bad_packets);
+        debug("%u ui %u ebl %u led", GUIProc.stack_slack() * 4, CommsProc.stack_slack() * 4, LEDProc.stack_slack() * 4);
     }
 }
-}
 
-void OS::system_timer_user_hook()
-{
 }
 
 #if scmRTOS_IDLE_HOOK_ENABLE

@@ -39,7 +39,6 @@
 
 #define debug(fmt, args...)	do { printf(fmt "\r\n", ##args); } while(0)
 
-#define __unused	__attribute__((unused))
 #define __noreturn	__attribute__((noreturn))
 
 namespace UI

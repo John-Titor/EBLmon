@@ -70,7 +70,7 @@ typedef uint_fast32_t tick_count_t;
 //    globally enabled within System Timer ISR (this is default for Cortex-M3).
 //
 //
-#define scmRTOS_SYSTIMER_NEST_INTS_ENABLE 1
+#define scmRTOS_SYSTIMER_NEST_INTS_ENABLE   0
 
 //-----------------------------------------------------------------------------
 //
@@ -85,7 +85,7 @@ typedef uint_fast32_t tick_count_t;
 //    scmRTOS System Timer Hook
 //
 //
-#define  scmRTOS_SYSTIMER_HOOK_ENABLE       1
+#define  scmRTOS_SYSTIMER_HOOK_ENABLE       0
 
 //-----------------------------------------------------------------------------
 //

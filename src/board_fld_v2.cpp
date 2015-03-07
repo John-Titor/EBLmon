@@ -176,8 +176,6 @@ usart1_isr(void)
 extern "C" int
 _write(int file __unused, char *ptr, int len)
 {
-//    TCritSect cs;
-
     for (auto i = 0; i < len; i++) {
         usart_send_blocking(USART1, *ptr++);
     }

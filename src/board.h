@@ -113,9 +113,9 @@ protected:
     void                        com_rx(uint8_t c);
 
 private:
-    static const unsigned       _rx_buf_size = 16;
+    static const unsigned       _rx_buf_size = 1024;
     OS::TEventFlag              _rx_data_avail;
-    uint8_t                     _rx_buf[_rx_buf_size];
+    uint8_t                     _rx_buf[_rx_buf_size + 1];
     unsigned                    _rx_head = 0;
     unsigned                    _rx_tail = 0;
 };

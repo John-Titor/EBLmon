@@ -125,6 +125,7 @@ tick()
 
 M2_EXTERN_ALIGN(_top);
 M2_EXTERN_ALIGN(_settings);
+M2_EXTERN_ALIGN(_stats);
 
 const char *ui_status_text = &ebl_status[0];
 
@@ -132,10 +133,12 @@ const char *ui_status_text = &ebl_status[0];
 //
 M2_LABEL(_top_title, "f1", "Menu");
 M2_ROOT(_top_settings, "f0", "Settings", &_settings);
+M2_ROOT(_top_stats, "f0", "Stats", &_stats);
 M2_ROOT(_top_done, "f0", "DONE", &ui_gauges);
 M2_LIST(_top_list) = {
     &_top_title,
     &_top_settings,
+    &_top_stats,
     &_top_done
 };
 M2_VLIST(_top_vlist, NULL, _top_list);
@@ -152,6 +155,19 @@ M2_LIST(_settings_list) = {
 M2_VLIST(_settings_vlist, NULL, _settings_list);
 M2_ALIGN(_settings, "-0|2W64H63", &_settings_vlist);
 
+// Stats menu
+//
+M2_U32NUM(_stats_pkts, "r1f0", (uint32_t *)&EBL::good_packets);
+M2_U32NUM(_stats_badpkts, "r1f0", (uint32_t *)&EBL::bad_packets);
+M2_ROOT(_stats_done, "f0", "DONE", &_top);
+M2_LIST(_stats_list) = {
+    &_stats_pkts,
+    &_stats_badpkts,
+    &_stats_done
+};
+M2_VLIST(_stats_vlist, NULL, _stats_list);
+M2_ALIGN(_stats, "-0|2W64H63", &_stats_vlist);
+
 // Mini-dashboard - speed on top, RPM below
 //
 const char *ui_2cell_1_text = &road_speed[0];
@@ -163,7 +179,7 @@ M2_ALIGN(_dash_cell_1, "x0y40w128h24", &_dash_cell_1_);
 M2_LABELPTR(_dash_cell_2_, "f1", &ui_2cell_2_text);
 M2_ALIGN(_dash_cell_2, "x0y14w128h24", &_dash_cell_2_);
 
-void _leave_dash(m2_el_fnarg_p fnarg) { m2_SetRootExtended(&_top, 1, 0); }
+void _leave_dash(m2_el_fnarg_p fnarg) { m2_SetRootExtended(&_top, 2, 0); }
 M2_BUTTONPTR(_dash_status,     "x0y0f0", &ui_status_text, &_leave_dash);
 
 M2_LIST(_dash_list) = {
@@ -194,7 +210,7 @@ M2_ALIGN(_gauges_cell_3, "x0y14w64h24", &_gauges_cell_3_);
 M2_LABELPTR(_gauges_cell_4_, "f1", &_gauge_4_text);
 M2_ALIGN(_gauges_cell_4, "x64y14w64h24", &_gauges_cell_4_);
 
-void _leave_gauges(m2_el_fnarg_p fnarg) { m2_SetRootExtended(&_dash, 1, 0); }
+void _leave_gauges(m2_el_fnarg_p fnarg) { m2_SetRootExtended(&_dash, 0, 0); }
 M2_BUTTONPTR(_gauges_status,     "x0y0f0", &ui_status_text, &_leave_gauges);
 
 M2_LIST(_gauges_list) = {

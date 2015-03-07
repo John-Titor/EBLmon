@@ -137,7 +137,6 @@ decode(uint8_t c)
 
         } else {
             bad_packets++;
-            debug("bad sum %04x", running_sum);
         }
 
         state = WAIT_H1;
