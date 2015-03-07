@@ -89,16 +89,15 @@ void
 tick()
 {
     m2_CheckKey();
+    m2_HandleKey();
 
-    if (m2_HandleKey()) {
-        /* picture loop */
-        u8g_FirstPage(&u8g);
+    /* picture loop */
+    u8g_FirstPage(&u8g);
 
-        do {
-            m2_Draw();
-            m2_CheckKey();
-        } while (u8g_NextPage(&u8g));
-    }
+    do {
+        m2_Draw();
+        m2_CheckKey();
+    } while (u8g_NextPage(&u8g));
 
     if (EBL::was_updated()) {
 
