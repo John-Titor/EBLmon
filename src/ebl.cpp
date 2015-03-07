@@ -132,7 +132,7 @@ decode(uint8_t c)
 
         // ths is the low byte of the running sum, so should be equal
         if (running_sum == c) {
-            //updated = true;
+            updated = true;
             good_packets++;
 
         } else {
