@@ -157,6 +157,7 @@ CFLAGS		 = $(ARCH_FLAGS) \
 		   -fno-common \
 		   -ffreestanding \
 		   -ffunction-sections -fdata-sections \
+		   -fno-builtin \
 		   -MD \
 		   $(addprefix -I,$(INCDIRS)) \
 		   $(EXTRA_DEFINES) \
@@ -169,6 +170,7 @@ CXXFLAGS	 = $(ARCH_FLAGS) \
 		   -fno-common \
 		   -ffreestanding \
 		   -ffunction-sections -fdata-sections \
+		   -fno-builtin \
 		   -fno-exceptions \
 		   -fno-rtti \
 		   -fno-threadsafe-statics \
@@ -194,6 +196,7 @@ STDLIBS		 = m c gcc nosys
 LDSCRIPT	 = stm32f103rbt6.ld ext/libopencm3/lib/stm32/f1/libopencm3_stm32f1.ld
 LDFLAGS		 = $(ARCH_FLAGS) \
 		   --static \
+		   --specs=nano.specs \
 		   -L $(LCM3)/lib \
 		   -l $(LCM3_LIB) \
 		   -nostartfiles \
